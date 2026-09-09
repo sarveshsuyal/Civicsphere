@@ -1,0 +1,7 @@
+import {useState} from 'react';
+import {useLocation} from 'react-router-dom';
+import {useQuery} from '@tanstack/react-query';
+import {useTranslation} from 'react-i18next';
+import {auditEntries} from '../../services/operations';
+import {Badge,Loading,ErrorState} from '../../components/ui';
+export default function Audit(){const {t,i18n}=useTranslation(),demo=useLocation().pathname.startsWith('/demo');const [page,setPage]=useState(0);const query=useQuery({queryKey:['audit',demo,page],queryFn:()=>auditEntries(demo,page)});return <><div className="page-heading"><div><h1>{t('audit')}</h1><p>{t('auditIntro')}</p></div></div><section className="panel">{query.isLoading?<Loading/>:query.error?<ErrorState message={t('operationFailed')} retry={()=>void query.refetch()}/>:query.data?.rows.length?<div className="table-scroll"><table><thead><tr>{['timestamp','type','object','reasonDetail'].map(k=><th key={k}>{t(k)}</th>)}</tr></thead><tbody>{query.data.rows.map(a=><tr key={a.id}><td>{new Date(a.created_at).toLocaleString(i18n.language)}</td><td><Badge value={a.action}/></td><td>{a.object_type}<small>{a.object_id}</small></td><td className="wrap-cell">{a.reason??'—'}</td></tr>)}</tbody></table></div>:<div className="state"><p>{t('noAudit')}</p></div>}<div className="table-bottom"><span>{query.data?.count??0}</span><div><button disabled={page===0} onClick={()=>setPage(p=>p-1)}>{t('previous')}</button><span>{page+1}</span><button disabled={(page+1)*25>=(query.data?.count??0)} onClick={()=>setPage(p=>p+1)}>{t('next')}</button></div></div></section></>;}

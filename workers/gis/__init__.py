@@ -1,0 +1,1 @@
+"""Secure vector ingestion worker."""

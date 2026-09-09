@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select extensions.plan(10);
+select extensions.ok((select bool_and(relrowsecurity) from pg_class where oid in ('public.jobs'::regclass,'public.spatial_features'::regclass,'public.tasks'::regclass)),'phase 2 tables use RLS');
+select extensions.ok(not has_table_privilege('authenticated','public.spatial_features','INSERT'),'clients cannot publish unvalidated geometry');
+select extensions.ok(not has_table_privilege('authenticated','public.tasks','INSERT'),'assignment must use authorized command');
+select extensions.ok(not has_table_privilege('authenticated','public.jobs','UPDATE'),'clients cannot forge worker status');
+select extensions.ok(not has_function_privilege('authenticated','public.claim_gis_job()','EXECUTE'),'only workers claim jobs');
+select extensions.ok(not has_function_privilege('anon','public.finish_gis_job(uuid,uuid,text,jsonb,jsonb,text,text)','EXECUTE'),'anonymous cannot finish jobs');
+select extensions.ok(not has_function_privilege('anon','public.assign_issue(uuid,uuid,uuid,text,uuid)','EXECUTE'),'anonymous cannot assign');
+select extensions.ok(not has_function_privilege('anon','public.reserve_dataset(text,text,text,bigint,text,uuid)','EXECUTE'),'anonymous cannot reserve uploads');
+select extensions.is((select public from storage.buckets where id='datasets'),false,'dataset storage is private');
+select extensions.is((select file_size_limit from storage.buckets where id='datasets'),20971520::bigint,'bucket enforces upload cap');
+select * from extensions.finish();
+rollback;

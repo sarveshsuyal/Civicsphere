@@ -15,12 +15,17 @@ const Dashboard=lazy(()=>import('./features/dashboard/Dashboard'));
 const IssueList=lazy(()=>import('./features/issues/IssueList'));
 const IssueDetail=lazy(()=>import('./features/issues/IssueDetail'));
 const Login=lazy(()=>import('./pages/Login'));
-const MapPage=lazy(()=>import('./pages/Workspaces').then(m=>({default:m.MapPage})));
-const Datasets=lazy(()=>import('./pages/Workspaces').then(m=>({default:m.Datasets})));
+const MapPage=lazy(()=>import('./features/map/MapPage'));
+const Datasets=lazy(()=>import('./features/datasets/DatasetList'));
+const DatasetUpload=lazy(()=>import('./features/datasets/DatasetUpload'));
+const DatasetDetail=lazy(()=>import('./features/datasets/DatasetDetail'));
+const Tasks=lazy(()=>import('./features/tasks/Tasks'));
+const Jobs=lazy(()=>import('./features/jobs/Jobs'));
+const Audit=lazy(()=>import('./features/audit/Audit'));
 const Admin=lazy(()=>import('./pages/Workspaces').then(m=>({default:m.Admin})));
 const Help=lazy(()=>import('./pages/Workspaces').then(m=>({default:m.Help})));
 const Planned=lazy(()=>import('./pages/Workspaces').then(m=>({default:m.Planned})));
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:1,staleTime:30000}}});
 function Guard({roles}:{roles?:Role[]}){const {session,profile,loading}=useAuth();const {t}=useTranslation();if(loading)return <Loading/>;if(!session)return <Navigate to="/login" replace/>;if(!profile?.is_active||profile.role==='PUBLIC_USER'||(roles&&!permitted(profile,roles)))return <ErrorState message={t('accessDenied')}/>;return <Outlet/>;}
-function routes(demo=false){return <><Route path="dashboard" element={<Dashboard/>}/><Route path="map" element={<MapPage/>}/><Route path="issues" element={<IssueList/>}/><Route path="issues/:id" element={<IssueDetail/>}/><Route path="reviews" element={<IssueList key="reviews"/>}/><Route path="datasets" element={<Datasets/>}/><Route path="help" element={<Help/>}/>{demo?<Route path="admin/*" element={<Admin/>}/>:<Route element={<Guard roles={adminRoles}/>}><Route path="admin/*" element={<Admin/>}/></Route>}{['tasks','risk','analytics','reports','alerts','settings','executive','jobs','ai','change-detection','hotspots','complaints','notifications','audit','field-verification','departments','users'].map(p=><Route key={p} path={p} element={<Planned/>}/>)}</>;}
+function routes(demo=false){return <><Route path="dashboard" element={<Dashboard/>}/><Route path="map" element={<MapPage/>}/><Route path="issues" element={<IssueList/>}/><Route path="issues/:id" element={<IssueDetail/>}/><Route path="reviews" element={<IssueList key="reviews"/>}/><Route path="datasets" element={<Datasets/>}/><Route path="datasets/upload" element={<DatasetUpload/>}/><Route path="datasets/:id" element={<DatasetDetail/>}/><Route path="tasks" element={<Tasks/>}/><Route path="jobs" element={<Jobs/>}/><Route path="audit" element={<Audit/>}/><Route path="help" element={<Help/>}/>{demo?<Route path="admin/*" element={<Admin/>}/>:<Route element={<Guard roles={adminRoles}/>}><Route path="admin/*" element={<Admin/>}/></Route>}{['risk','analytics','reports','alerts','settings','executive','ai','change-detection','hotspots','complaints','notifications','field-verification','departments','users'].map(p=><Route key={p} path={p} element={<Planned/>}/>)}</>;}
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={queryClient}><AuthProvider><BrowserRouter><Boundary><Suspense fallback={<Loading/>}><Routes><Route path="/" element={<Home/>}/>{['about','features','solutions','platform','contact','privacy','terms','accessibility','map-preview'].map(p=><Route key={p} path={p} element={<PublicPage/>}/>)}{['login','forgot-password','reset-password'].map(p=><Route key={p} path={p} element={<Login/>}/>)}<Route path="/demo" element={<Shell/>}><Route index element={<Navigate to="dashboard" replace/>}/>{routes(true)}</Route><Route element={<Guard/>}><Route element={<Shell/>}>{routes()}</Route></Route><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Suspense></Boundary></BrowserRouter></AuthProvider></QueryClientProvider></React.StrictMode>);

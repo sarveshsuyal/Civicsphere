@@ -2,6 +2,10 @@
 
 Urban intelligence, geospatial context, and accountable city operations.
 
+## Phase 2 update
+
+Phase 2 source implementation is now included. See [phase 2 scope and release gates](docs/phase2.md) and the [GIS worker setup](workers/README.md). New flows cover private uploads, validated imports, CRS correction, map layers, assignment/SLA start, jobs and audit. Live end-to-end verification remains blocked. The status below describes the original milestone 1 baseline.
+
 ## Delivery status
 
 This repository is a **milestone 1 implementation in progress**, not a completed production platform. The public website and isolated read-only demo run without credentials. Live routes require real Supabase authentication and a provisioned active profile. Missing configuration fails closed.

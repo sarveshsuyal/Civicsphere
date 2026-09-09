@@ -7,3 +7,7 @@ frontend/dist/
 dist/
 *.tsbuildinfo
 supabase/.temp/
+__pycache__/
+*.pyc
+/pip-*/
+/tmp*
