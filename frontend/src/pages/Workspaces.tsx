@@ -1,11 +1,79 @@
-import {lazy,Suspense,useState} from 'react';
-import {Link,useLocation} from 'react-router-dom';
-import {useTranslation} from 'react-i18next';
-import {useQuery} from '@tanstack/react-query';
-import {Database,ShieldCheck,Users,Building2,Activity,ArrowUpRight,BookOpen,Layers3} from 'lucide-react';
-import {requireClient,supabase} from '../services/client';
-import {Loading,ErrorState} from '../components/ui';
-const CityMap=lazy(()=>import('../features/map/CityMap'));
-export function Admin(){const {t}=useTranslation();const demo=useLocation().pathname.startsWith('/demo');const [tab,setTab]=useState('system');const data=useQuery({queryKey:['admin',demo,tab],enabled:!demo&&tab!=='system',queryFn:async()=>{const {data,error}=await requireClient().from(tab==='users'?'profiles':'departments').select(tab==='users'?'id,display_name,role,is_active':'id,name,code,is_active').limit(100);if(error)throw error;return data as unknown as Record<string,unknown>[];}});return <><div className="page-heading"><div><div className="eyebrow">{t('management')}</div><h1>{t('admin')}</h1><p>{t('adminText')}</p></div><ShieldCheck size={28}/></div><div className="tabs">{[['system',Activity],['users',Users],['departments',Building2]].map(([key,Icon])=>{const I=Icon as typeof Users;return <button className={tab===key?'selected':''} onClick={()=>setTab(String(key))} key={String(key)}><I size={17}/>{key==='users'?'Users':t(String(key))}</button>;})}</div><section className="panel detail-panel"><h2>{tab==='system'?t('productionGate'):tab==='users'?'Users':t('departments')}</h2>{tab==='system'?['Supabase connection','Database migrations & RLS','PostGIS viewport queries','Email & redirect configuration','Vercel production deployment','Authorized user provisioning'].map((s,i)=><div className="health-row" key={s}><span>{s}</span><span className="health-pending">{i===0&&supabase?t('connected'):t('pending')}</span></div>):demo?<div className="state"><Users/><p>{t('demoNotice')}</p><Link to="/login">{t('signIn')}</Link></div>:data.isLoading?<Loading/>:data.error?<ErrorState message={data.error.message}/>:data.data?.length?<div className="table-scroll"><table><tbody>{data.data.map(row=><tr key={String(row.id)}>{Object.entries(row).filter(([k])=>k!=='id').map(([k,v])=><td key={k}>{String(v)}</td>)}</tr>)}</tbody></table></div>:<p>{t('empty')}</p>}</section></>;}
-export function Help(){const {t}=useTranslation();return <><div className="page-heading"><div><h1>{t('help')}</h1><p>Find your way around CivicSphere.</p></div><BookOpen/></div><div className="capability-grid">{[['Explore the map','Pan or zoom to load signals in the current viewport. Select a marker to open its issue record.'],['Review a detection','Open the review queue, inspect evidence, and record a reason for your decision. Only authorized reviewers can submit a review.'],['Keyboard shortcuts','Use Ctrl / Command + K to search navigation and demo issues. Use Tab to move between controls and Escape to close dialogs.']].map(([a,b])=><article key={a}><h2>{a}</h2><p>{b}</p></article>)}</div></>;}
-export function Planned(){const {t}=useTranslation();const path=useLocation().pathname;const name=path.split('/').pop()||'';return <><div className="page-heading"><div><div className="eyebrow">CIVICSPHERE ROADMAP</div><h1>{t(name)}</h1><p>This workspace is part of the next implementation milestones.</p></div><Layers3/></div><section className="panel"><div className="state"><ShieldCheck size={34}/><h2>Operational integration pending</h2><p>This module will become available after the required backend workflow is deployed and verified.</p><Link className="button" to={`${path.startsWith('/demo')?'/demo':''}/dashboard`}>{t('dashboard')}<ArrowUpRight size={16}/></Link></div></section></>;}
+import { lazy } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ShieldCheck, ArrowUpRight, BookOpen, Layers3 } from 'lucide-react';
+import AdminPanel from '../features/admin/AdminPanel';
+
+export function Admin() {
+  return <AdminPanel />;
+}
+
+export function Help() {
+  const { t } = useTranslation();
+  return (
+    <div className="animate-fade-in">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">OPERATIONAL ASSISTANCE</div>
+          <h1>{t('help')}</h1>
+          <p>Find your way around CivicSphere municipal workflows and spatial intelligence.</p>
+        </div>
+        <BookOpen />
+      </div>
+      <div className="capability-grid">
+        {[
+          [
+            'Explore the Geospatial Map',
+            'Pan or zoom to load infrastructure signals in the current viewport. Select an active marker to open its telemetry and issue record.',
+          ],
+          [
+            'Review AI Detections & Evidence',
+            'Open the review queue, inspect photographic evidence and confidence ratings, and record an authorized reason for verification or rejection.',
+          ],
+          [
+            'Role-Based Authorization & Governance',
+            'Use the Administration console to provision municipal accounts, manage departments, inspect audit logs, and test RBAC policies.',
+          ],
+          [
+            'Keyboard & Command Shortcuts',
+            'Use Ctrl / Command + K to open the global command palette and jump instantly across workspaces, datasets, and civic signals.',
+          ],
+        ].map(([a, b]) => (
+          <article key={a} className="interactive-card">
+            <h2>{a}</h2>
+            <p>{b}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function Planned() {
+  const { t } = useTranslation();
+  const path = useLocation().pathname;
+  const name = path.split('/').pop() || '';
+  return (
+    <div className="animate-fade-in">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">CIVICSPHERE ROADMAP</div>
+          <h1>{t(name)}</h1>
+          <p>This workspace is part of the next implementation milestones.</p>
+        </div>
+        <Layers3 />
+      </div>
+      <section className="panel">
+        <div className="state">
+          <ShieldCheck size={34} />
+          <h2>Operational integration pending</h2>
+          <p>This module will become available after the required backend workflow is deployed and verified.</p>
+          <Link className="button" to={`${path.startsWith('/demo') ? '/demo' : ''}/dashboard`}>
+            {t('dashboard')}
+            <ArrowUpRight size={16} />
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}

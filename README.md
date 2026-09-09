@@ -2,19 +2,24 @@
 
 Urban intelligence, geospatial context, and accountable city operations.
 
-## Phase 2 update
+## Operational Update: Authorization System & Admin Panel
 
-Phase 2 source implementation is now included. See [phase 2 scope and release gates](docs/phase2.md) and the [GIS worker setup](workers/README.md). New flows cover private uploads, validated imports, CRS correction, map layers, assignment/SLA start, jobs and audit. Live end-to-end verification remains blocked. The status below describes the original milestone 1 baseline.
-
-## Delivery status
-
-This repository is a **milestone 1 implementation in progress**, not a completed production platform. The public website and isolated read-only demo run without credentials. Live routes require real Supabase authentication and a provisioned active profile. Missing configuration fails closed.
-
-Implemented: React/TypeScript/Vite application, public pages, English/Hindi core navigation, Supabase password sign-in/reset integration, session restoration, guarded workspace/admin routes, issue list and details, filters/pagination, Leaflet map and viewport requests, demo dashboard, command palette, department/dataset/admin read surfaces, PostGIS migration, scoped RLS policies, aggregate statistics, transactional review RPC, audit records, authenticated Vercel API adapters, deployment configuration and critical unit tests.
-
-Not yet complete: provisioning UI, comprehensive localization, complete public marketing sections, MFA/SSO, full role management, secure ingestion/storage pipeline, background workers, AI inference, assignment/tasks/field workflow, SLA, risk/hotspots, alerts/realtime, reports, full analytics, end-to-end tests, and live RLS verification. Future modules have explicit roadmap states and do not simulate operational success.
-
-The current UI uses custom CSS tokens and Radix dialogs. Tailwind/shadcn component adoption, React Hook Form, and the remaining recommended libraries are pending; they are not claimed as implemented.
+CivicSphere now includes a full **Role-Based Access Control (RBAC) Authorization System**, a comprehensive **Administrative Control Panel**, interactive identity testing, and smooth CSS UI animations while maintaining the exact civic color palette:
+- **Authorization & RBAC System**:
+  - 11 distinct municipal roles (`SUPER_ADMIN`, `ADMIN`, `CITY_OFFICER`, `DEPARTMENT_MANAGER`, `GIS_ANALYST`, `FIELD_OFFICER`, `REVIEWER`, `DATA_MANAGER`, `REPORT_ANALYST`, `VIEWER`, `PUBLIC_USER`).
+  - Dual authentication engine: seamless Supabase backend support + client-side persistent RBAC session store (`authStore`).
+  - Interactive Role Switcher in the application header and profile menu to easily test and verify permission gating in real-time.
+  - Quick sign-in role cards on the login page, credential authentication, and new personnel registration.
+- **Municipal Administration Panel (`/admin`)**:
+  - **System Health & Subsystem Verification**: Live KPI statistics, PostGIS index indicators, tamper-evident audit logging, and worker queue health.
+  - **Personnel & Access Directory**: Search, role filtering, invite team members, update role privileges, and suspend/activate accounts.
+  - **Municipal Departments**: Governance of departments (Roads, Health, Water, Electrical, Planning, Emergency) with SLA compliance and staff metrics.
+  - **RBAC Matrix & Simulator**: Visual capability grid mapping all 11 roles to 10 system actions with deterministic verification.
+  - **Security Audit Logs**: Real-time event log with actor identity, action tags, and JSON report export.
+  - **City Operations Parameters**: Configurable SLA escalation windows, automated dispatch toggles, and AI review requirements.
+- **Visual Micro-Interactions & Animations**:
+  - Performant GPU-accelerated keyframe animations (`fadeIn`, `slideUp`, `scaleIn`, `pulseGlow`).
+  - Smooth card elevations, button click responses, animated status indicators, and modal transitions respecting `prefers-reduced-motion`.
 
 ## Local setup
 

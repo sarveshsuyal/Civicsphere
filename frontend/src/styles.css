@@ -8,3 +8,82 @@
 /* Phase 2 operational surfaces */
 .operations-form{display:flex;flex-direction:column;gap:20px}.operations-form label{display:flex;flex-direction:column;gap:9px;font-size:14px;font-weight:550}.operations-form input,.operations-form select,.operations-form textarea{width:100%;font-weight:400}.operations-form textarea{min-height:110px}.upload-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(250px,1fr);gap:24px}.upload-grid aside h2{margin-top:20px}.upload-drop{padding:28px;border:1px dashed var(--primary);border-radius:10px;background:var(--blue-soft);align-items:center;text-align:center}.upload-drop span{font-size:13px;color:var(--muted);line-height:1.6}.upload-drop input{background:white;max-width:100%;font-size:13px}.phase2-notice{margin:0 0 22px;background:var(--blue-soft);border-color:var(--line);color:var(--text);font-size:14px}.quality-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}.quality-grid>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:17px}.quality-grid span{display:block;font-size:13px;color:var(--muted)}.quality-grid strong{display:block;font-size:25px;margin-top:10px;font-family:Manrope,sans-serif}.sla-state{display:flex;flex-direction:column;gap:6px;max-width:240px;white-space:normal;font-size:12px;padding:12px 0}.sla-state strong{font-size:13px;color:var(--green)}.sla-state.breached strong{color:var(--critical)}.sla-state.warning strong,.sla-state.managerWarning strong{color:var(--warning)}.sla-state time,.sla-state span{font-size:12px;color:var(--muted)}progress{height:6px;width:130px;accent-color:var(--primary)}.sla-state.breached progress{accent-color:var(--critical)}.assignment-summary{padding-top:18px;font-size:13px}.wrap-cell{white-space:normal;min-width:250px;max-width:500px}.map-filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}.map-filters label{display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--muted);flex:1;min-width:140px}.map-filters select{font-size:13px}.layer-cap{position:absolute;z-index:450;top:12px;left:55px;background:white;padding:8px 10px;border-radius:6px;border:1px solid var(--line);font-size:11px;max-width:260px}.sidebar{overflow-y:auto}.sidebar .nav-group{margin-bottom:15px}.sidebar .nav-group>a{padding-top:8px;padding-bottom:8px}
 @media(max-width:700px){.upload-grid{grid-template-columns:1fr}.quality-grid{gap:10px}.quality-grid>div{padding:13px}.quality-grid span{font-size:12px}.map-filters label{min-width:45%}.map-filters label:last-child{min-width:100%}.dialog-content{max-height:80vh;overflow:auto}.sidebar-bottom{padding-top:10px}}
+
+/* CivicSphere Animation & Administration Engine */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
+@keyframes pulseGlow{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.22);opacity:0.75}}
+
+.animate-fade-in{animation:fadeIn .35s cubic-bezier(0.16,1,0.3,1) both}
+.animate-slide-up{animation:slideUp .4s cubic-bezier(0.16,1,0.3,1) both}
+.animate-scale-in{animation:scaleIn .3s cubic-bezier(0.16,1,0.3,1) both}
+.dot-pulse{animation:pulseGlow 2s ease-in-out infinite}
+.dot-pulse-green{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px #28a7822a;animation:pulseGlow 2s ease-in-out infinite;vertical-align:middle}
+
+.stat-card,.dept-card,.interactive-card,.role-card-item{transition:transform .22s cubic-bezier(0.16,1,0.3,1),box-shadow .22s cubic-bezier(0.16,1,0.3,1),border-color .22s ease}
+.stat-card:hover,.dept-card:hover,.interactive-card:hover,.role-card-item:hover{transform:translateY(-2px);box-shadow:0 12px 30px #273b7015;border-color:#ccd9f7}
+.interactive-row{transition:background-color .15s ease}
+.interactive-row:hover{background-color:#f6f9ff!important}
+button:active,.button:active{transform:scale(0.98)}
+
+.quick-roles-container{margin-top:10px}
+.role-cards-grid{display:grid;grid-template-columns:1fr;gap:9px;max-height:380px;overflow-y:auto;padding-right:4px}
+.role-card-item{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);background:white;border-radius:8px;text-align:left;cursor:pointer;width:100%}
+.role-card-item:hover{background:var(--blue-soft)}
+.role-card-header{display:flex;align-items:center;gap:10px;width:100%}
+.role-card-header strong{display:block;font-size:13px;color:var(--text)}
+.role-card-header small{display:block;font-size:10px;color:var(--muted)}
+.role-card-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--primary);border-top:1px dashed #e4ecf9;padding-top:6px;width:100%}
+
+.admin-page{display:flex;flex-direction:column;gap:20px}
+.admin-actor-card{display:flex;align-items:center;gap:12px;padding:10px 16px;background:white;border:1px solid var(--line);border-radius:9px;box-shadow:0 3px 8px #273b7008}
+.admin-actor-card strong{display:block;font-size:13px}
+.status-live-pill{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--green);background:#ebf8f3;padding:2px 6px;border-radius:4px}
+.admin-tabs{margin-bottom:24px;flex-wrap:wrap}
+.admin-feedback-toast{display:flex;align-items:center;gap:10px;background:#ebf8f3;border:1px solid #b7e8d6;color:#1b6d54;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 12px #28a78215}
+
+.system-health-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:18px}
+.health-card{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.health-card-header{display:flex;align-items:center;justify-content:space-between}
+.health-card-header strong{font-size:13px;color:var(--text)}
+.health-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.5}
+.health-card-meta{display:flex;justify-content:space-between;font-size:10px;color:#79869c;border-top:1px solid #e7edf6;padding-top:8px;margin-top:auto}
+.status-pill-ok{font-size:10px;font-weight:600;color:var(--green);background:#ebf8f3;padding:3px 8px;border-radius:12px}
+.status-pill{display:inline-flex;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.status-pill.active{background:#ebf8f3;color:var(--green)}
+.status-pill.suspended{background:#fff0f0;color:var(--critical)}
+
+.quick-switch-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;font-size:12px;border:1px solid var(--line);background:white;color:var(--text);cursor:pointer;transition:all .15s ease}
+.chip-btn:hover{background:var(--blue-soft);border-color:#bccdf7}
+.chip-btn.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 3px 8px #3865e825}
+.chip-btn.active small{color:#dce7ff}
+
+.dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:20px}
+.dept-card{border:1px solid var(--line);border-radius:10px;background:white;overflow:hidden}
+.dept-card-header{padding:16px 18px;background:#fbfcfe;border-bottom:1px solid var(--line);display:flex;align-items:start;justify-content:space-between}
+.dept-card-header h3{font-size:15px;margin:0}
+.dept-card-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.dept-stat span{display:block;font-size:10px;color:var(--muted)}
+.dept-stat strong{display:block;font-size:13px;margin-top:2px}
+.dept-stat small{font-size:11px;color:var(--primary)}
+.dept-metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-top:1px solid var(--line);padding-top:12px;text-align:center}
+.dept-metrics-row span{display:block;font-size:9px;color:var(--muted)}
+.dept-metrics-row strong{display:block;font-size:14px;font-family:'Manrope',sans-serif;margin-top:2px}
+
+.matrix-table th{background:#f8fafc}
+.matrix-check{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#ebf8f3;color:var(--green);font-weight:700;font-size:12px;margin:auto}
+.matrix-dash{color:#c4cdda;font-size:14px}
+
+.role-selector-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:var(--blue-soft);color:var(--primary);border:1px solid #d8e3fd;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+.role-selector-pill:hover{background:#e3ebfe;box-shadow:0 2px 6px #3865e814}
+.role-pill-text{text-transform:capitalize}
+
+.role-switcher-grid{display:grid;grid-template-columns:1fr;gap:8px;max-height:420px;overflow-y:auto}
+.role-switcher-option{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);background:white;border-radius:8px;cursor:pointer;transition:all .15s ease}
+.role-switcher-option:hover{background:var(--blue-soft);border-color:#c2d3fb}
+.role-switcher-option.selected{background:#f0f4ff;border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+
+@media(max-width:900px){.dept-grid{grid-template-columns:1fr}.system-health-grid{grid-template-columns:1fr}}
+
