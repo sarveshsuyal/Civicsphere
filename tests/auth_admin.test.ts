@@ -109,3 +109,35 @@ describe('Municipal Departments & Governance', () => {
     expect(audits[0].action).toBe('DEPT_CREATE');
   });
 });
+
+describe('Authentication & Session Lifecycle', () => {
+  it('authenticates with correct credentials and creates session', () => {
+    const user = authStore.authenticate('admin@civicsphere.gov.in', 'Password123!');
+    expect(user.email).toBe('admin@civicsphere.gov.in');
+    expect(authStore.isAuthenticated()).toBe(true);
+    expect(authStore.getCurrentUser()?.id).toBe(user.id);
+  });
+
+  it('rejects invalid passwords', () => {
+    expect(() =>
+      authStore.authenticate('admin@civicsphere.gov.in', 'WrongPassword999')
+    ).toThrow('Invalid email or password');
+  });
+
+  it('rejects nonexistent email addresses', () => {
+    expect(() =>
+      authStore.authenticate('nonexistent@city.gov.in', 'Password123!')
+    ).toThrow('Invalid email or password');
+  });
+
+  it('clears session on logout', () => {
+    authStore.authenticate('admin@civicsphere.gov.in', 'Password123!');
+    expect(authStore.isAuthenticated()).toBe(true);
+
+    authStore.logout();
+    expect(authStore.isAuthenticated()).toBe(false);
+    expect(authStore.getCurrentUser()).toBeNull();
+    expect(authStore.getCurrentProfile()).toBeNull();
+  });
+});
+

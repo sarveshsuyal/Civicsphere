@@ -2,46 +2,32 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, ArrowRight, UserCheck, KeyRound, Sparkles, Building2, UserPlus } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Lock, KeyRound } from 'lucide-react';
 import { z } from 'zod';
-import { supabase } from '../services/client';
 import { Logo, Language } from '../components/ui';
 import { useAuth } from '../features/auth/Auth';
-import { authStore } from '../features/auth/authStore';
-import type { Role } from '../types/domain';
+import { supabase } from '../services/client';
 
 export default function Login() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { signInLocal, registerLocal, switchProfile } = useAuth();
+  const { signIn } = useAuth();
 
   const forgot = pathname === '/forgot-password';
   const reset = pathname === '/reset-password';
 
-  const [tab, setTab] = useState<'signin' | 'quick' | 'register'>('quick');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
-  const [selectedDept, setSelectedDept] = useState('dept-roads');
 
-  const managedUsers = authStore.getUsers();
-  const departments = authStore.getDepartments();
-
-  const handleQuickSignIn = (userId: string) => {
+  const fillCredentials = (userEmail: string, pass: string) => {
+    setEmail(userEmail);
+    setPassword(pass);
     setError('');
-    try {
-      switchProfile(userId);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to switch identity.');
-    }
   };
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -51,19 +37,6 @@ export default function Login() {
     setBusy(true);
 
     try {
-      if (tab === 'register') {
-        if (!displayName.trim()) throw new Error('Please enter your full name.');
-        z.string().email().parse(email);
-        await registerLocal({
-          display_name: displayName,
-          email,
-          role: selectedRole,
-          department_id: selectedDept || null,
-        });
-        navigate('/dashboard');
-        return;
-      }
-
       if (forgot) {
         z.string().email().parse(email);
         if (supabase) {
@@ -72,7 +45,7 @@ export default function Login() {
           });
           if (resetErr) throw resetErr;
         }
-        setMessage('If this municipal account exists, a password reset authorization has been recorded.');
+        setMessage('If an account exists for this address, a password reset link has been dispatched.');
         return;
       }
 
@@ -86,27 +59,21 @@ export default function Login() {
         return;
       }
 
-      // Standard Sign In
+      // Validate inputs
       z.string().email().parse(email);
       z.string().min(6).parse(password);
 
-      if (supabase) {
-        try {
-          const { error: sErr } = await supabase.auth.signInWithPassword({ email, password });
-          if (!sErr) {
-            navigate('/dashboard');
-            return;
-          }
-        } catch {
-          // fallback to local auth if remote is offline or fails
-        }
-      }
+      // Authenticate
+      const prof = await signIn(email, password);
 
-      // Local / Offline RBAC sign in
-      await signInLocal(email);
-      navigate('/dashboard');
+      // Navigate based on role
+      if (prof.role === 'SUPER_ADMIN' || prof.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in.');
+      setError(err instanceof Error ? err.message : 'Invalid credentials. Please verify your email and password.');
     } finally {
       setBusy(false);
     }
@@ -122,10 +89,10 @@ export default function Login() {
       </header>
 
       <div className="login-layout">
-        <aside className="animate-slide-up">
+        <aside className="animate-slide-left">
           <div className="eyebrow">
-            <span></span>
-            CONNECTED CITY OPERATIONS & RBAC
+            <span className="dot-pulse"></span>
+            CONNECTED CITY OPERATIONS
           </div>
           <h1>
             Better visibility.
@@ -136,194 +103,121 @@ export default function Login() {
           </h1>
           <p>{t('heroText')}</p>
 
-          <div className="login-principle">
-            <ShieldCheck size={26} />
+          <div className="login-principle interactive-card">
+            <ShieldCheck size={24} />
             <div>
-              <strong>Granular Role-Based Authorization</strong>
-              <p>Strict access boundaries between City Administration, Department Managers, GIS Analysts, and Field Officers.</p>
-            </div>
-          </div>
-
-          <div className="login-principle" style={{ marginTop: '20px' }}>
-            <Sparkles size={26} style={{ color: 'var(--cyan)' }} />
-            <div>
-              <strong>Interactive Evaluation Suite</strong>
-              <p>Switch between roles instantly to inspect live access permissions, review workflows, and the admin control panel.</p>
+              <strong>{t('accountable')}</strong>
+              <p>{t('accountableText')}</p>
             </div>
           </div>
         </aside>
 
         <section className="login-form animate-slide-up">
-          <h2>{forgot ? t('forgot') : reset ? t('resetPassword') : 'City Workspace Sign In'}</h2>
+          <h2>{t(forgot ? 'forgot' : reset ? 'resetPassword' : 'loginTitle')}</h2>
           <p>{t('loginText')}</p>
 
-          {!forgot && !reset && (
-            <div className="tabs" style={{ marginTop: '20px', marginBottom: '16px' }}>
-              <button
-                type="button"
-                className={tab === 'quick' ? 'selected' : ''}
-                onClick={() => { setTab('quick'); setError(''); }}
-              >
-                <UserCheck size={16} />
-                Quick Role Sign-In
-              </button>
-              <button
-                type="button"
-                className={tab === 'signin' ? 'selected' : ''}
-                onClick={() => { setTab('signin'); setError(''); }}
-              >
-                <KeyRound size={16} />
-                Credentials
-              </button>
-              <button
-                type="button"
-                className={tab === 'register' ? 'selected' : ''}
-                onClick={() => { setTab('register'); setError(''); }}
-              >
-                <UserPlus size={16} />
-                New Account
-              </button>
-            </div>
-          )}
+          <form onSubmit={(e) => void submit(e)}>
+            {!reset && (
+              <label>
+                {t('email')}
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="you@city.gov.in"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="interactive-input"
+                />
+              </label>
+            )}
 
-          {tab === 'quick' && !forgot && !reset ? (
-            <div className="quick-roles-container">
-              <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>
-                Select a verified municipal role profile to immediately access the workspace with its authorized permissions:
-              </p>
-              <div className="role-cards-grid">
-                {managedUsers.slice(0, 6).map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    className="role-card-item"
-                    onClick={() => handleQuickSignIn(u.id)}
-                  >
-                    <div className="role-card-header">
-                      <span className="avatar" style={{ width: '32px', height: '32px', fontSize: '11px' }}>
-                        {u.avatar_initials}
-                      </span>
-                      <div>
-                        <strong>{u.display_name}</strong>
-                        <small>{u.department_name}</small>
-                      </div>
-                      <span className={`badge ${u.role === 'SUPER_ADMIN' || u.role === 'ADMIN' ? 'critical' : 'verified'}`} style={{ marginLeft: 'auto' }}>
-                        {u.role.replaceAll('_', ' ')}
-                      </span>
-                    </div>
-                    <div className="role-card-footer">
-                      <span>{u.email}</span>
-                      <ArrowRight size={14} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={(e) => void submit(e)}>
-              {tab === 'register' && (
+            {!forgot && (
+              <label>
+                {t('password')}
+                <input
+                  name="password"
+                  type="password"
+                  minLength={6}
+                  maxLength={128}
+                  required
+                  autoComplete={reset ? 'new-password' : 'current-password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="interactive-input"
+                />
+              </label>
+            )}
+
+            {!forgot && !reset && (
+              <Link to="/forgot-password" style={{ alignSelf: 'flex-end', fontSize: '12px', color: 'var(--primary)' }}>
+                {t('forgot')}
+              </Link>
+            )}
+
+            {error && <p className="form-error" role="alert">{error}</p>}
+            {message && <p role="status" style={{ color: 'var(--green)', fontSize: '13px' }}>{message}</p>}
+
+            <button className="primary" type="submit" disabled={busy}>
+              {busy ? (
+                t('loading')
+              ) : (
                 <>
-                  <label>
-                    Full Name
-                    <input
-                      name="displayName"
-                      type="text"
-                      required
-                      placeholder="e.g. Ramesh Kumar"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                    />
-                  </label>
-
-                  <label>
-                    Assigned Role
-                    <select
-                      value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value as Role)}
-                    >
-                      <option value="SUPER_ADMIN">Super Administrator (Full System Control)</option>
-                      <option value="ADMIN">City Administrator (Ops & Users)</option>
-                      <option value="DEPARTMENT_MANAGER">Department Manager (Triage & SLA)</option>
-                      <option value="GIS_ANALYST">GIS Specialist (Layers & Processing)</option>
-                      <option value="FIELD_OFFICER">Field Officer (Inspections)</option>
-                      <option value="REVIEWER">Civic Reviewer & Auditor</option>
-                      <option value="VIEWER">Observer / Viewer</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Department
-                    <select
-                      value={selectedDept}
-                      onChange={(e) => setSelectedDept(e.target.value)}
-                    >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.code})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {t(forgot ? 'sendReset' : reset ? 'resetPassword' : 'signIn')}
+                  <ArrowRight size={17} />
                 </>
               )}
+            </button>
+          </form>
 
-              {!reset && (
-                <label>
-                  {t('email')}
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="admin@civicsphere.gov.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </label>
-              )}
-
-              {!forgot && (
-                <label>
-                  {t('password')}
-                  <input
-                    name="password"
-                    type="password"
-                    minLength={6}
-                    maxLength={128}
-                    required
-                    placeholder="••••••••"
-                    autoComplete={reset ? 'new-password' : 'current-password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </label>
-              )}
-
-              {!forgot && !reset && (
-                <Link to="/forgot-password" style={{ fontSize: '12px', color: 'var(--primary)', textAlign: 'right' }}>
-                  {t('forgot')}
-                </Link>
-              )}
-
-              {error && <p className="form-error" role="alert">{error}</p>}
-              {message && <p role="status" style={{ color: 'var(--green)', fontSize: '13px' }}>{message}</p>}
-
-              <button className="primary" type="submit" disabled={busy}>
-                {busy ? t('loading') : t(forgot ? 'sendReset' : reset ? 'resetPassword' : tab === 'register' ? 'register' : 'signIn')}
-                <ArrowRight size={17} />
-              </button>
-            </form>
+          {!forgot && !reset && (
+            <div className="demo-credentials-box animate-fade-in">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <KeyRound size={13} style={{ color: 'var(--primary)' }} />
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)' }}>
+                  Test Credentials (Click to fill):
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="chip-btn"
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  onClick={() => fillCredentials('admin@civicsphere.gov.in', 'Password123!')}
+                >
+                  <Lock size={11} />
+                  Admin Account
+                </button>
+                <button
+                  type="button"
+                  className="chip-btn"
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  onClick={() => fillCredentials('manager.transport@civicsphere.gov.in', 'Password123!')}
+                >
+                  Department Manager
+                </button>
+                <button
+                  type="button"
+                  className="chip-btn"
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  onClick={() => fillCredentials('field.officer@civicsphere.gov.in', 'Password123!')}
+                >
+                  Field Officer
+                </button>
+              </div>
+            </div>
           )}
 
-          <div className="login-divider">OR EXPLORE PUBLIC DEMO</div>
+          <div className="login-divider">CIVICSPHERE PREVIEW</div>
           <Link className="button" to="/demo/dashboard">
             {t('demoEntry')}
             <ArrowRight size={16} />
           </Link>
-
           <small>
             <ShieldCheck size={14} />
-            {supabase ? t('secure') : 'Secured with Local & Cryptographic RBAC Guard'}
+            {t('secure')}
           </small>
         </section>
       </div>

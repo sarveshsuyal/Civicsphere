@@ -16,8 +16,8 @@ interface AuthContextValue {
   permissions: Permission[];
   hasPerm: (permission: Permission) => boolean;
   switchProfile: (userId: string) => void;
-  signInLocal: (email: string) => Promise<Profile>;
-  registerLocal: (data: { display_name: string; email: string; role: Role; department_id: string | null }) => Promise<Profile>;
+  signIn: (email: string, password: string) => Promise<Profile>;
+  register: (data: { display_name: string; email: string; role: Role; department_id: string | null; password?: string }) => Promise<Profile>;
   signOut: () => Promise<void>;
 }
 
@@ -30,8 +30,8 @@ const Context = createContext<AuthContextValue>({
   permissions: [],
   hasPerm: () => false,
   switchProfile: () => {},
-  signInLocal: async () => { throw new Error('Not initialized'); },
-  registerLocal: async () => { throw new Error('Not initialized'); },
+  signIn: async () => { throw new Error('Not initialized'); },
+  register: async () => { throw new Error('Not initialized'); },
   signOut: async () => {},
 });
 
@@ -78,15 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isLiveBackend] = useState<boolean>(Boolean(supabase));
 
-  // Sync profile & session from authStore
-  const syncFromStore = () => {
-    const user = authStore.getActiveUser();
-    const prof = authStore.getActiveProfile();
-    setActiveUser(user);
-    setProfile(prof);
-    setSession(createMockSession(user));
-  };
-
   useEffect(() => {
     let active = true;
 
@@ -123,29 +114,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 display_name: data.display_name,
                 role: data.role,
                 department_id: data.department_id,
-                department_name: 'Municipal Department',
+                department_name: 'Municipal Operations',
                 organization_id: data.organization_id,
                 is_active: data.is_active,
                 created_at: new Date().toISOString(),
                 last_login_at: new Date().toISOString(),
                 avatar_initials: data.display_name.slice(0, 2).toUpperCase(),
               });
-            } else if (active && generation === current) {
-              // Fallback to local profile if remote row not provisioned yet
-              syncFromStore();
             }
           } else {
-            // Check if local session preferred
-            const savedLocal = localStorage.getItem('civicsphere_active_user_id');
-            if (savedLocal) {
-              syncFromStore();
-            } else {
+            // Check local authenticated session
+            const current = authStore.getCurrentUser();
+            if (current && active) {
+              setActiveUser(current);
+              setProfile(authStore.getCurrentProfile());
+              setSession(createMockSession(current));
+            } else if (active) {
+              setSession(null);
               setProfile(null);
               setActiveUser(null);
             }
           }
         } catch {
-          if (active && generation === current) syncFromStore();
+          if (active) {
+            setSession(null);
+            setProfile(null);
+            setActiveUser(null);
+          }
         } finally {
           if (active && generation === current) setLoading(false);
         }
@@ -155,10 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .getSession()
         .then(({ data }) => load(data.session))
         .catch(() => {
-          if (active) {
-            syncFromStore();
-            setLoading(false);
-          }
+          if (active) setLoading(false);
         });
 
       const {
@@ -173,9 +165,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       };
     } else {
-      // Local Auth Mode: restore session from store
+      // Local Auth Mode: check if user is already logged in
       try {
-        syncFromStore();
+        const current = authStore.getCurrentUser();
+        if (current) {
+          setActiveUser(current);
+          setProfile(authStore.getCurrentProfile());
+          setSession(createMockSession(current));
+        } else {
+          // NOT logged in by default!
+          setSession(null);
+          setProfile(null);
+          setActiveUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -186,37 +188,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cache.clear();
     const user = authStore.switchActiveUser(userId);
     setActiveUser(user);
-    const prof = authStore.getActiveProfile();
+    const prof = authStore.getCurrentProfile();
     setProfile(prof);
     setSession(createMockSession(user));
   };
 
-  const signInLocal = async (email: string): Promise<Profile> => {
-    const users = authStore.getUsers();
-    const found = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!found) {
-      throw new Error(`No account found for "${email}". You can sign in with a demo profile or create a new account.`);
+  const signIn = async (email: string, password: string): Promise<Profile> => {
+    if (supabase) {
+      try {
+        const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+        if (!error && data.session) {
+          setSession(data.session);
+          return authStore.getCurrentProfile() || {
+            id: data.user.id,
+            organization_id: 'org-ahmedabad',
+            department_id: null,
+            role: 'ADMIN',
+            display_name: data.user.email?.split('@')[0] || 'Administrator',
+            is_active: true,
+          };
+        }
+      } catch {
+        // fallback to store authentication
+      }
     }
-    if (!found.is_active) {
-      throw new Error('This account has been suspended by an administrator.');
-    }
-    switchProfile(found.id);
-    return authStore.getActiveProfile();
+
+    // Authenticate with authStore (validates email & password)
+    const user = authStore.authenticate(email, password);
+    cache.clear();
+    setActiveUser(user);
+    const prof = authStore.getCurrentProfile()!;
+    setProfile(prof);
+    setSession(createMockSession(user));
+    return prof;
   };
 
-  const registerLocal = async (data: {
+  const register = async (data: {
     display_name: string;
     email: string;
     role: Role;
     department_id: string | null;
+    password?: string;
   }): Promise<Profile> => {
     const user = authStore.addUser(data);
-    switchProfile(user.id);
-    return authStore.getActiveProfile();
+    cache.clear();
+    authStore.switchActiveUser(user.id);
+    setActiveUser(user);
+    const prof = authStore.getCurrentProfile()!;
+    setProfile(prof);
+    setSession(createMockSession(user));
+    return prof;
   };
 
   const signOut = async () => {
     cache.clear();
+    authStore.logout();
     if (supabase) {
       try {
         await supabase.auth.signOut({ scope: 'global' });
@@ -227,12 +253,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setActiveUser(null);
-    localStorage.removeItem('civicsphere_active_user_id');
   };
 
   const permissions: Permission[] = profile?.is_active
     ? (authStore.hasPermission(profile.role, 'VIEW_MAP')
-        ? (Object.keys(authStore) as unknown as Permission[]) // placeholder
+        ? (Object.keys(authStore) as unknown as Permission[])
         : [])
     : [];
 
@@ -252,8 +277,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         permissions,
         hasPerm,
         switchProfile,
-        signInLocal,
-        registerLocal,
+        signIn,
+        register,
         signOut,
       }}
     >

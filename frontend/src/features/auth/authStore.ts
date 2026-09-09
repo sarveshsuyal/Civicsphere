@@ -17,6 +17,7 @@ export type Permission =
 export interface ManagedUser {
   id: string;
   email: string;
+  password?: string;
   display_name: string;
   role: Role;
   department_id: string | null;
@@ -161,6 +162,8 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   PUBLIC_USER: 'Citizen portal view with limited public safety broadcasts and map boundaries.',
 };
 
+const DEFAULT_PASSWORD = 'Password123!';
+
 const INITIAL_DEPARTMENTS: Department[] = [
   {
     id: 'dept-roads',
@@ -240,6 +243,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-sarvesh',
     email: 'admin@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Sarvesh Suyal',
     role: 'SUPER_ADMIN',
     department_id: null,
@@ -247,12 +251,13 @@ const INITIAL_USERS: ManagedUser[] = [
     organization_id: 'org-ahmedabad',
     is_active: true,
     created_at: '2026-08-01T09:00:00Z',
-    last_login_at: new Date().toISOString(),
+    last_login_at: '2026-09-09T02:00:00Z',
     avatar_initials: 'SS',
   },
   {
     id: 'usr-aarav',
     email: 'operations@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Aarav Sharma',
     role: 'ADMIN',
     department_id: null,
@@ -266,6 +271,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-priya',
     email: 'manager.transport@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Priya Patel',
     role: 'DEPARTMENT_MANAGER',
     department_id: 'dept-roads',
@@ -279,6 +285,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-vikram',
     email: 'gis@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Dr. Vikram Mehta',
     role: 'GIS_ANALYST',
     department_id: 'dept-plan',
@@ -292,6 +299,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-ramesh',
     email: 'field.officer@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Ramesh Kumar',
     role: 'FIELD_OFFICER',
     department_id: 'dept-roads',
@@ -305,6 +313,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-ananya',
     email: 'auditor@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Ananya Desai',
     role: 'REVIEWER',
     department_id: null,
@@ -318,6 +327,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-neha',
     email: 'neha.shah@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Neha Shah',
     role: 'DATA_MANAGER',
     department_id: 'dept-water',
@@ -331,6 +341,7 @@ const INITIAL_USERS: ManagedUser[] = [
   {
     id: 'usr-alok',
     email: 'alok.gupta@civicsphere.gov.in',
+    password: DEFAULT_PASSWORD,
     display_name: 'Alok Gupta',
     role: 'VIEWER',
     department_id: null,
@@ -429,11 +440,12 @@ const INITIAL_SETTINGS: SystemSettings = {
 };
 
 const STORAGE_KEYS = {
-  USERS: 'civicsphere_users_v2',
-  DEPARTMENTS: 'civicsphere_departments_v2',
-  AUDIT: 'civicsphere_audit_v2',
-  SETTINGS: 'civicsphere_settings_v2',
-  CURRENT_USER_ID: 'civicsphere_active_user_id',
+  USERS: 'civicsphere_users_v3',
+  DEPARTMENTS: 'civicsphere_departments_v3',
+  AUDIT: 'civicsphere_audit_v3',
+  SETTINGS: 'civicsphere_settings_v3',
+  SESSION_TOKEN: 'civicsphere_session_token_v3',
+  CURRENT_USER_ID: 'civicsphere_session_user_v3',
 };
 
 const memStorage = new Map<string, string>();
@@ -461,23 +473,45 @@ function safeSetItem(key: string, value: string): void {
   memStorage.set(key, value);
 }
 
+function safeRemoveItem(key: string): void {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage?.removeItem) {
+      localStorage.removeItem(key);
+      return;
+    }
+  } catch {
+    // fallback
+  }
+  memStorage.delete(key);
+}
+
 class AuthStoreService {
   private users: ManagedUser[];
   private departments: Department[];
   private auditLogs: AdminAuditEntry[];
   private settings: SystemSettings;
-  private activeUserId: string;
+  private activeUserId: string | null = null;
+  private sessionToken: string | null = null;
 
   constructor() {
     this.users = this.loadFromStorage(STORAGE_KEYS.USERS, INITIAL_USERS);
     this.departments = this.loadFromStorage(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     this.auditLogs = this.loadFromStorage(STORAGE_KEYS.AUDIT, INITIAL_AUDIT_LOGS);
     this.settings = this.loadFromStorage(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
-    this.activeUserId = safeGetItem(STORAGE_KEYS.CURRENT_USER_ID) || INITIAL_USERS[0].id;
 
-    if (!this.users.some(u => u.id === this.activeUserId)) {
-      this.activeUserId = this.users[0]?.id || INITIAL_USERS[0].id;
-      safeSetItem(STORAGE_KEYS.CURRENT_USER_ID, this.activeUserId);
+    // Only restore session if both token AND active user exist
+    const savedToken = safeGetItem(STORAGE_KEYS.SESSION_TOKEN);
+    const savedUserId = safeGetItem(STORAGE_KEYS.CURRENT_USER_ID);
+
+    if (savedToken && savedUserId && this.users.some(u => u.id === savedUserId && u.is_active)) {
+      this.sessionToken = savedToken;
+      this.activeUserId = savedUserId;
+    } else {
+      // Unauthenticated by default!
+      this.sessionToken = null;
+      this.activeUserId = null;
+      safeRemoveItem(STORAGE_KEYS.SESSION_TOKEN);
+      safeRemoveItem(STORAGE_KEYS.CURRENT_USER_ID);
     }
   }
 
@@ -499,13 +533,18 @@ class AuthStoreService {
     }
   }
 
-  public getActiveUser(): ManagedUser {
-    const user = this.users.find(u => u.id === this.activeUserId);
-    return user || this.users[0];
+  public isAuthenticated(): boolean {
+    return Boolean(this.activeUserId && this.sessionToken);
   }
 
-  public getActiveProfile(): Profile {
-    const u = this.getActiveUser();
+  public getCurrentUser(): ManagedUser | null {
+    if (!this.activeUserId || !this.sessionToken) return null;
+    return this.users.find(u => u.id === this.activeUserId && u.is_active) ?? null;
+  }
+
+  public getCurrentProfile(): Profile | null {
+    const u = this.getCurrentUser();
+    if (!u) return null;
     return {
       id: u.id,
       organization_id: u.organization_id,
@@ -516,10 +555,54 @@ class AuthStoreService {
     };
   }
 
+  public authenticate(email: string, password: string): ManagedUser {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = this.users.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      throw new Error('Invalid email or password. Please check your credentials.');
+    }
+    if (!user.is_active) {
+      throw new Error('This municipal account has been suspended by an administrator.');
+    }
+
+    const expectedPassword = user.password || DEFAULT_PASSWORD;
+    if (password !== expectedPassword) {
+      throw new Error('Invalid email or password. Please check your credentials.');
+    }
+
+    const token = 'civic_token_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    this.sessionToken = token;
+    this.activeUserId = user.id;
+    safeSetItem(STORAGE_KEYS.SESSION_TOKEN, token);
+    safeSetItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
+
+    user.last_login_at = new Date().toISOString();
+    this.persist(STORAGE_KEYS.USERS, this.users);
+
+    this.addAudit('AUTH_LOGIN', 'AUTH', user.email, `User ${user.display_name} signed in successfully.`);
+
+    return user;
+  }
+
+  public logout(): void {
+    const user = this.getCurrentUser();
+    if (user) {
+      this.addAudit('AUTH_LOGOUT', 'AUTH', user.email, `User ${user.display_name} signed out.`);
+    }
+    this.sessionToken = null;
+    this.activeUserId = null;
+    safeRemoveItem(STORAGE_KEYS.SESSION_TOKEN);
+    safeRemoveItem(STORAGE_KEYS.CURRENT_USER_ID);
+  }
+
   public switchActiveUser(userId: string): ManagedUser {
     const user = this.users.find(u => u.id === userId);
     if (!user) throw new Error('User not found');
+    const token = 'civic_token_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    this.sessionToken = token;
     this.activeUserId = user.id;
+    safeSetItem(STORAGE_KEYS.SESSION_TOKEN, token);
     safeSetItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
     this.addAudit(
       'AUTH_SWITCH',
@@ -539,6 +622,7 @@ class AuthStoreService {
     email: string;
     role: Role;
     department_id: string | null;
+    password?: string;
   }): ManagedUser {
     const existing = this.users.find(u => u.email.toLowerCase() === input.email.toLowerCase());
     if (existing) {
@@ -556,6 +640,7 @@ class AuthStoreService {
     const newUser: ManagedUser = {
       id: 'usr-' + Date.now().toString(36),
       email: input.email.trim(),
+      password: input.password || DEFAULT_PASSWORD,
       display_name: input.display_name.trim(),
       role: input.role,
       department_id: input.department_id,
@@ -683,13 +768,13 @@ class AuthStoreService {
     details: string,
     status: AdminAuditEntry['status'] = 'SUCCESS'
   ): void {
-    const active = this.getActiveUser();
+    const active = this.getCurrentUser();
     const entry: AdminAuditEntry = {
       id: 'aud-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       timestamp: new Date().toISOString(),
-      actor_name: active.display_name,
-      actor_email: active.email,
-      actor_role: active.role,
+      actor_name: active?.display_name || 'System / Unauthenticated',
+      actor_email: active?.email || 'system@civicsphere.gov.in',
+      actor_role: active?.role || 'PUBLIC_USER',
       action,
       category,
       target,
